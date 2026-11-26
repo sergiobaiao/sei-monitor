@@ -313,14 +313,15 @@ public class M4FenceAdversarialTests : IDisposable
     {
         var vm = new FenceViewModel(_config, _db, _poller, _dispatcher, _shell);
 
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-        int eventCounter = 0;
+        const int iterations = 24;
+        var timeout = TimeSpan.FromSeconds(45);
+        using var start = new Barrier(2);
 
         var pollerTask = Task.Run(() =>
         {
-            while (!cts.IsCancellationRequested)
+            Assert.True(start.SignalAndWait(timeout));
+            for (int id = 1; id <= iterations; id++)
             {
-                int id = Interlocked.Increment(ref eventCounter);
                 var proc = new MonitoredProcess
                 {
                     Id = $"PROC_{id}",
@@ -336,21 +337,22 @@ public class M4FenceAdversarialTests : IDisposable
         var switcherTask = Task.Run(() =>
         {
             string[] groups = { "", "GRP_1", "GRP_2", null! };
-            int idx = 0;
-            while (!cts.IsCancellationRequested)
+            Assert.True(start.SignalAndWait(timeout));
+            for (int idx = 0; idx < iterations; idx++)
             {
                 vm.SelectGroup(groups[idx % groups.Length]);
                 vm.RefreshGroups();
-                idx++;
                 Thread.Sleep(8);
             }
         });
 
-        await Task.WhenAll(pollerTask, switcherTask);
+        await Task.WhenAll(pollerTask, switcherTask).WaitAsync(timeout);
 
         // Verifica consistência final
-        Assert.True(vm.CountMonitored >= 0);
-        Assert.True(eventCounter > 10);
+        vm.SelectGroup(null);
+        vm.RefreshCounts();
+        Assert.Equal(iterations, vm.CountMonitored);
+        Assert.Equal(iterations, vm.DisplayedProcesses.Count);
     }
 
     // =========================================================================
