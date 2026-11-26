@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## Versão do SEI Monitor
+
+Ao alterar código do aplicativo, atualize `<Version>` em `src/SeiMonitor/SeiMonitor.csproj` no mesmo conjunto de mudanças. Siga SemVer com patch para correções, minor para funcionalidades compatíveis e major para mudanças incompatíveis. O GitHub Actions publica uma release para cada nova versão que chega à branch `main`.
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
