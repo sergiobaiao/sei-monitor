@@ -35,13 +35,26 @@ public class ConfigTests : IDisposable
         Assert.False(_config.StartMinimized);
         Assert.True(_config.CloseToTray);
         Assert.True(_config.MinimizeToTray);
-        Assert.Equal("https://sei.pi.gov.br/api/v2", _config.SeiWsseiBaseUrl);
+        Assert.Equal("https://sei.pi.gov.br/sei/modulos/wssei/controlador_ws.php/api/v2", _config.SeiWsseiBaseUrl);
         Assert.Equal("https://api.sei.pi.gov.br", _config.SeiSeadBaseUrl);
         Assert.Equal("PGE-PI", _config.SeiSeadOrgao);
         Assert.Equal("GINFO", _config.SeiUnidadeSigla);
         Assert.Null(_config.FenceX);
         Assert.Null(_config.FenceY);
         Assert.Empty(_config.UserKeywords);
+    }
+
+    [Theory]
+    [InlineData("https://sei.pi.gov.br/api/v2", "https://sei.pi.gov.br/sei/modulos/wssei/controlador_ws.php/api/v2")]
+    [InlineData(" https://sei.pi.gov.br/api/v2/ ", "https://sei.pi.gov.br/sei/modulos/wssei/controlador_ws.php/api/v2")]
+    [InlineData("https://wssei.example.org/api/v2/", "https://wssei.example.org/api/v2")]
+    public void SeiWsseiBaseUrl_NormalizesOldDefaultAndPreservesCustomEndpoint(string stored, string expected)
+    {
+        _db.SetSetting("sei_wssei_base_url", stored);
+        Assert.Equal(expected, _config.SeiWsseiBaseUrl);
+
+        _config.SeiWsseiBaseUrl = stored;
+        Assert.Equal(expected, _db.GetSetting("sei_wssei_base_url"));
     }
 
     [Fact]

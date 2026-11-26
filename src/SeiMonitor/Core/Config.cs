@@ -12,6 +12,9 @@ namespace SeiMonitor.Core;
 /// </summary>
 public sealed class Config : INotifyPropertyChanged
 {
+    private const string WsseiBaseUrl = "https://sei.pi.gov.br/sei/modulos/wssei/controlador_ws.php/api/v2";
+    private const string LegacyWsseiBaseUrl = "https://sei.pi.gov.br/api/v2";
+
     private readonly Database _db;
 
     public Config(Database db)
@@ -86,8 +89,14 @@ public sealed class Config : INotifyPropertyChanged
     // ==========================================
     public string SeiWsseiBaseUrl
     {
-        get => Str("sei_wssei_base_url", "https://sei.pi.gov.br/api/v2");
-        set => SetStr("sei_wssei_base_url", value.Trim().TrimEnd('/'));
+        get => NormalizeWsseiBaseUrl(Str("sei_wssei_base_url", WsseiBaseUrl));
+        set => SetStr("sei_wssei_base_url", NormalizeWsseiBaseUrl(value));
+    }
+
+    private static string NormalizeWsseiBaseUrl(string value)
+    {
+        var url = value.Trim().TrimEnd('/');
+        return string.Equals(url, LegacyWsseiBaseUrl, StringComparison.OrdinalIgnoreCase) ? WsseiBaseUrl : url;
     }
 
     public string SeiWsseiUsuario

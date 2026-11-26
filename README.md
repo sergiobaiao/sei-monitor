@@ -117,7 +117,7 @@ dotnet run --project src/SeiMonitor/SeiMonitor.csproj -c Release
 Ao abrir o monitor pela primeira vez:
 1. Abra a aba **Configurações** na janela principal (`MainWindow`).
 2. Informe:
-   - **URL do SEI / WSSEI**: Endpoint do WSSEI v2 ou da API SEAD.
+   - **Endpoints** para WSSEI v2 e SEAD. A base padrão do WSSEI no Piauí é `https://sei.pi.gov.br/sei/modulos/wssei/controlador_ws.php/api/v2`.
    - **Unidade Padrão**: Sigla da unidade de lotação (ex.: `GINFO`).
    - **Usuário e Senha**: Salvos de forma segura no Windows Credential Manager.
    - **Palavras-chave do Usuário**: Seus nomes, apelidos ou matrículas separados por vírgula para ativar a heurística de "Destinado a Você".
