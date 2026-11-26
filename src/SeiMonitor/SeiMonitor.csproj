@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Habilitado exclusivamente para o NotifyIcon da bandeja do sistema -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>SeiMonitor</AssemblyName>
+    <Version>1.0.0</Version>
+    <RootNamespace>SeiMonitor</RootNamespace>
+    <ApplicationIcon>Assets\SeiMonitor.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Elimina colisões de namespace entre WPF e WinForms -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Banco de dados local ultraleve SQLite -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Permite acesso das suites de testes unitários e E2E aos tipos internos -->
+    <InternalsVisibleTo Include="SeiMonitor.Tests" />
+    <InternalsVisibleTo Include="SeiMonitor.E2ETests" />
+  </ItemGroup>
+
+</Project>

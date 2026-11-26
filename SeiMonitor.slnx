@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SeiMonitor/SeiMonitor.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SeiMonitor.E2ETests/SeiMonitor.E2ETests.csproj" />
+    <Project Path="tests/SeiMonitor.Tests/SeiMonitor.Tests.csproj" />
+  </Folder>
+</Solution>

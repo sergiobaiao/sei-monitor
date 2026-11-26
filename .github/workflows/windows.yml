@@ -1,0 +1,119 @@
+name: Windows CI and Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Test
+        run: dotnet test SeiMonitor.slnx -c Release -v minimal
+
+  release:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: windows-2025
+    permissions:
+      contents: write
+    concurrency:
+      group: windows-release
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Resolve release version
+        id: version
+        run: |
+          $project = [xml](Get-Content src/SeiMonitor/SeiMonitor.csproj -Raw)
+          $version = $project.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw 'Use a stable version (major.minor.patch) in SeiMonitor.csproj.'
+          }
+          $tag = "v$version"
+          $release = gh release view $tag --json isDraft 2>$null
+          $exists = $LASTEXITCODE -eq 0
+          $draft = $exists -and ($release | ConvertFrom-Json).isDraft
+          $needed = !$exists -or $draft
+          if ($needed) {
+            $tagRefs = git ls-remote origin "refs/tags/$tag" "refs/tags/$tag^{}"
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to verify the remote tag.' }
+            if ($tagRefs -and (($tagRefs | Select-Object -Last 1) -split '\s+')[0] -ne $env:GITHUB_SHA) {
+              throw "Existing tag $tag points to another commit."
+            }
+          }
+          @("version=$version", "tag=$tag", "needed=$($needed.ToString().ToLowerInvariant())", "draft=$($draft.ToString().ToLowerInvariant())") |
+            Add-Content $env:GITHUB_OUTPUT
+          if (!$needed) { Write-Output "$tag is already published. Update <Version> for a new release." }
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        if: steps.version.outputs.needed == 'true'
+        with:
+          dotnet-version: 10.0.x
+      - name: Build Windows packages
+        if: steps.version.outputs.needed == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $publish = Join-Path $env:RUNNER_TEMP 'sei-monitor-publish'
+          $artifacts = (New-Item -ItemType Directory (Join-Path $env:RUNNER_TEMP 'sei-monitor-artifacts')).FullName
+          dotnet publish src/SeiMonitor/SeiMonitor.csproj -c Release -r win-x64 --self-contained true -p:DebugType=None -o $publish
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed.' }
+          if (!(Test-Path (Join-Path $publish 'SeiMonitor.exe'))) { throw 'SeiMonitor.exe is missing.' }
+          Compress-Archive -Path (Join-Path $publish '*') -DestinationPath (Join-Path $artifacts 'SEI-Monitor-Portable-win-x64.zip')
+
+          $compilerSetup = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.1.exe'
+          $compilerHome = Join-Path $env:RUNNER_TEMP 'inno-setup'
+          Invoke-WebRequest -Uri 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_1/innosetup-6.7.1.exe' -OutFile $compilerSetup
+          if ((Get-FileHash $compilerSetup -Algorithm SHA256).Hash -ne '4d11e8050b6185e0d49bd9e8cc661a7a59f44959a621d31d11033124c4e8a7b0') {
+            throw 'Unexpected Inno Setup SHA-256.'
+          }
+          $setup = Start-Process $compilerSetup -WindowStyle Hidden -Wait -PassThru -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER',('/DIR="{0}"' -f $compilerHome)
+          if ($setup.ExitCode -ne 0) { throw "Inno Setup installation failed ($($setup.ExitCode))." }
+          & (Join-Path $compilerHome 'ISCC.exe') "/DAppVersion=$env:RELEASE_VERSION" "/DPublishDir=$publish" "/DArtifactDir=$artifacts" installer/SeiMonitor.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
+
+          $installDir = Join-Path $env:RUNNER_TEMP 'sei-monitor-install-test'
+          $install = Start-Process (Join-Path $artifacts 'SEI-Monitor-Setup-win-x64.exe') -WindowStyle Hidden -Wait -PassThru -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/DIR="{0}"' -f $installDir)
+          if ($install.ExitCode -ne 0) { throw "Installer smoke test failed ($($install.ExitCode))." }
+          if ((Get-FileHash (Join-Path $installDir 'SeiMonitor.exe')).Hash -ne (Get-FileHash (Join-Path $publish 'SeiMonitor.exe')).Hash) {
+            throw 'Installed executable differs from the published executable.'
+          }
+      - name: Publish GitHub Release
+        if: steps.version.outputs.needed == 'true'
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_DRAFT: ${{ steps.version.outputs.draft }}
+        run: |
+          $artifacts = Join-Path $env:RUNNER_TEMP 'sei-monitor-artifacts'
+          $files = @('SEI-Monitor-Setup-win-x64.exe', 'SEI-Monitor-Portable-win-x64.zip') |
+            ForEach-Object { (Get-Item (Join-Path $artifacts $_)).FullName }
+          $latestTag = gh api "repos/$env:GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>$null
+          $latestFlag = '--latest'
+          if ($LASTEXITCODE -eq 0 -and $latestTag -match '^v\d+\.\d+\.\d+$' -and
+              [version]$latestTag.Substring(1) -gt [version]$env:RELEASE_TAG.Substring(1)) {
+            $latestFlag = '--latest=false'
+          }
+          if ($env:RELEASE_DRAFT -eq 'true') {
+            gh release upload $env:RELEASE_TAG @files --clobber
+            if ($LASTEXITCODE -ne 0) { throw 'Release asset upload failed.' }
+            gh release edit $env:RELEASE_TAG --draft=false $latestFlag
+          } else {
+            gh release create $env:RELEASE_TAG @files --target $env:GITHUB_SHA --title "SEI Monitor $env:RELEASE_TAG" --generate-notes $latestFlag
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }

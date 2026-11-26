@@ -1,0 +1,687 @@
+<Window x:Class="SeiMonitor.Ui.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:core="clr-namespace:SeiMonitor.Core"
+        mc:Ignorable="d"
+        Title="SEI Monitor — Painel de Controle"
+        Height="720" Width="1080"
+        MinHeight="580" MinWidth="880"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Bg0}"
+        Foreground="{DynamicResource Fg}"
+        FontFamily="Segoe UI Variable Text, Segoe UI, -apple-system, sans-serif">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Estilos de Botão Fluent -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Bg3}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Bg2}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo de Linha de DataGrid -->
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}"/>
+            <EventSetter Event="MouseDoubleClick" Handler="OnProcessRowDoubleClick"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Bg2}"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Bg3}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Estilo de Header de DataGrid -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource Bg2}"/>
+            <Setter Property="Foreground" Value="{DynamicResource FgMuted}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Linha 0: Barra Superior Fluent -->
+            <RowDefinition Height="54"/>
+            <!-- Linha 1: Conteúdo Principal com TabControl -->
+            <RowDefinition Height="*"/>
+            <!-- Linha 2: Barra de Status Inferior -->
+            <RowDefinition Height="28"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. Barra Superior -->
+        <Border Grid.Row="0" Background="{DynamicResource Bg2}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Identidade do App -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="⚡" FontSize="18" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="SEI Monitor" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Fg}" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource Bg3}" CornerRadius="4" Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtHeaderUnidade" Text="GINFO" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource FgMuted}"/>
+                    </Border>
+                    <Border Background="{DynamicResource Bg3}" CornerRadius="4" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtHeaderUsuario" Text="Servidor" FontSize="10" Foreground="{DynamicResource FgMuted}"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Sincronização e Ações Globais -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtLastSyncStatus" Text="Aguardando sincronização..."
+                               FontSize="11" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    <Button x:Name="BtnGlobalSync" Content="🔄 Sincronizar Agora"
+                            Style="{StaticResource PrimaryButtonStyle}" Click="OnGlobalSyncClick" Margin="0,0,8,0"/>
+                    <Button x:Name="BtnOpenSeiPortal" Content="🌐 Abrir SEI"
+                            Style="{StaticResource SecondaryButtonStyle}" Click="OnOpenSeiPortalClick"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. Abas Principais (5 Abas) -->
+        <TabControl Grid.Row="1" x:Name="MainTabs" Background="Transparent" BorderThickness="0" SelectionChanged="OnTabSelectionChanged">
+            
+            <!-- ABA 1: VISÃO GERAL -->
+            <TabItem x:Name="TabOverview" Header="📊 Visão Geral" FontSize="13" FontWeight="SemiBold">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <!-- Cards de Resumo (KPIs) -->
+                        <UniformGrid Columns="4" Rows="1">
+                            <!-- Card Monitorados -->
+                            <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,10,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="📂" FontSize="16" Margin="0,0,6,0"/>
+                                        <TextBlock Text="PROCESSOS MONITORADOS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PillMonitoredBrush}"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="TxtCardMonitored" Text="0" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                    <TextBlock Text="Total registrados no banco local" FontSize="11" Foreground="{DynamicResource FgDim}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card Novos Andamentos -->
+                            <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="5,0,5,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="⚡" FontSize="16" Margin="0,0,6,0"/>
+                                        <TextBlock Text="NOVOS ANDAMENTOS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PillNewDocsBrush}"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="TxtCardNewActivities" Text="0" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                    <TextBlock Text="Processos não lidos pelo usuário" FontSize="11" Foreground="{DynamicResource FgDim}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card Para Você -->
+                            <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="5,0,5,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="🎯" FontSize="16" Margin="0,0,6,0"/>
+                                        <TextBlock Text="DESTINADOS A VOCÊ" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PillDestinedBrush}"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="TxtCardDestined" Text="0" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                    <TextBlock Text="Match de palavras-chave / UPN" FontSize="11" Foreground="{DynamicResource FgDim}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card Atenção GINFO -->
+                            <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="10,0,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="⚠️" FontSize="16" Margin="0,0,6,0"/>
+                                        <TextBlock Text="ATENÇÃO GINFO (COLEGA)" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PillAttentionBrush}"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="TxtCardAttention" Text="0" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                    <TextBlock Text="Aberto por colega sem despacho" FontSize="11" Foreground="{DynamicResource FgDim}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- Seção Movimentações Recentes -->
+                        <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,16,0,0">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="🕒 Movimentações Recentes" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                    <Button Content="Ir para Caixa de Entrada →" Style="{StaticResource SecondaryButtonStyle}"
+                                            HorizontalAlignment="Right" Click="OnGoToInboxClick"/>
+                                </DockPanel>
+
+                                <ItemsControl x:Name="ListRecentProcesses">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1"
+                                                    CornerRadius="8" Padding="12" Margin="0,0,0,8" Cursor="Hand" MouseLeftButtonUp="OnRecentItemClick">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="📋" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                                    
+                                                    <StackPanel Grid.Column="1">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding ProtocoloFormatado}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource Fg}"/>
+                                                            <Border Background="{DynamicResource PillDestinedBrush}" CornerRadius="4" Padding="4,1" Margin="8,0,0,0"
+                                                                    Visibility="{Binding DestinadoAoUsuario, Converter={StaticResource BoolToVis}}">
+                                                                <TextBlock Text="🎯 PARA VOCÊ" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
+                                                            </Border>
+                                                            <Border Background="{DynamicResource PillAttentionBrush}" CornerRadius="4" Padding="4,1" Margin="4,0,0,0"
+                                                                    Visibility="{Binding AbertoPorTerceiro, Converter={StaticResource BoolToVis}}">
+                                                                <TextBlock Text="⚠️ ABERTO POR COLEGA" FontSize="9" FontWeight="Bold" Foreground="#000000"/>
+                                                            </Border>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding UltimaAtividadeDesc}" FontSize="12" Foreground="{DynamicResource FgMuted}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+
+                                                    <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding UltimaAtividadeData}" FontSize="11" Foreground="{DynamicResource FgDim}" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding UltimoUsuarioNome}" FontSize="10" Foreground="{DynamicResource FgMuted}" HorizontalAlignment="Right"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ABA 2: CAIXA DE ENTRADA GINFO -->
+            <TabItem x:Name="TabInbox" Header="📥 Caixa de Entrada GINFO" FontSize="13" FontWeight="SemiBold">
+                <Grid Margin="20">
+                    <Grid.RowDefinitions>
+                        <!-- Barra de Pesquisa e Filtros -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- DataGrid de Processos -->
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Filtros e Busca -->
+                    <Border Grid.Row="0" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="TxtSearchInbox" Grid.Column="0" Height="32" FontSize="12"
+                                     Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}"
+                                     BorderBrush="{DynamicResource BorderBrush}" Padding="8,4"
+                                     VerticalContentAlignment="Center" TextChanged="OnSearchInboxTextChanged"
+                                     ToolTip="Buscar por número SEI, descrição, tipo ou servidor..."/>
+
+                            <!-- Chips / Botões de Filtro -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                                <RadioButton x:Name="RbFilterAll" Content="Todos" GroupName="InboxFilters" IsChecked="True"
+                                             Checked="OnFilterRadioChanged" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <RadioButton x:Name="RbFilterDestined" Content="🎯 Para Você" GroupName="InboxFilters"
+                                             Checked="OnFilterRadioChanged" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <RadioButton x:Name="RbFilterThirdParty" Content="⚠️ Coleca Abriu" GroupName="InboxFilters"
+                                             Checked="OnFilterRadioChanged" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <RadioButton x:Name="RbFilterUnread" Content="⚡ Não Lidos" GroupName="InboxFilters"
+                                             Checked="OnFilterRadioChanged" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- DataGrid Principal da Caixa -->
+                    <DataGrid Grid.Row="1" x:Name="DgInboxProcesses" AutoGenerateColumns="False" IsReadOnly="True"
+                              SelectionMode="Single" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1" CanUserSortColumns="True" CanUserResizeRows="False" RowHeight="40">
+                        <DataGrid.Columns>
+                            <!-- Badges -->
+                            <DataGridTemplateColumn Header="STATUS" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="🎯" FontSize="11" Margin="2,0" Visibility="{Binding DestinadoAoUsuario, Converter={StaticResource BoolToVis}}" ToolTip="Destinado a você"/>
+                                            <TextBlock Text="⚠️" FontSize="11" Margin="2,0" Visibility="{Binding AbertoPorTerceiro, Converter={StaticResource BoolToVis}}" ToolTip="Aberto por colega sem despacho"/>
+                                            <TextBlock Text="⚡" FontSize="11" Margin="2,0" Visibility="{Binding IsUnread, Converter={StaticResource BoolToVis}}" ToolTip="Nova movimentação não lida"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Número SEI -->
+                            <DataGridTextColumn Header="NÚMERO SEI" Binding="{Binding ProtocoloFormatado}" Width="210" FontWeight="Bold"/>
+
+                            <!-- Tipo de Processo -->
+                            <DataGridTextColumn Header="TIPO DO PROCESSO" Binding="{Binding TipoProcesso}" Width="190"/>
+
+                            <!-- Último Andamento -->
+                            <DataGridTextColumn Header="ÚLTIMO ANDAMENTO" Binding="{Binding UltimaAtividadeDesc}" Width="*"/>
+
+                            <!-- Servidor Responsável -->
+                            <DataGridTextColumn Header="SERVIDOR" Binding="{Binding UltimoUsuarioNome}" Width="130"/>
+
+                            <!-- Data e Hora -->
+                            <DataGridTextColumn Header="DATA / HORA" Binding="{Binding UltimaAtividadeData}" Width="140"/>
+
+                            <!-- Ações de Linha -->
+                            <DataGridTemplateColumn Header="AÇÕES" Width="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Button Content="✓ Lido" FontSize="10" Padding="6,2" Margin="0,0,4,0"
+                                                    Style="{StaticResource SecondaryButtonStyle}" Click="OnToggleReadRowClick"
+                                                    ToolTip="Marcar como lido ou não lido"/>
+                                            <Button Content="↗ SEI" FontSize="10" Padding="6,2"
+                                                    Style="{StaticResource SecondaryButtonStyle}" Click="OnOpenInSeiRowClick"
+                                                    ToolTip="Abrir processo no navegador"/>
+                                            <Button Content="🔍" FontSize="10" Padding="6,2" Margin="4,0,0,0"
+                                                    Style="{StaticResource SecondaryButtonStyle}" Click="OnOpenDetailRowClick"
+                                                    ToolTip="Ver detalhes completos do processo"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ABA 3: ACOMPANHAMENTO ESPECIAL -->
+            <TabItem x:Name="TabSpecial" Header="⭐ Acompanhamento Especial" FontSize="13" FontWeight="SemiBold">
+                <Grid Margin="20">
+                    <Grid.ColumnDefinitions>
+                        <!-- Painel Esquerdo: Gestão de Grupos -->
+                        <ColumnDefinition Width="280"/>
+                        <!-- Painel Direito: Processos do Grupo -->
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Lista e Gestão de Grupos -->
+                    <Border Grid.Column="0" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,12,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                                <TextBlock Text="📁 Grupos Cadastrados" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource Fg}"/>
+                            </DockPanel>
+
+                            <ListBox Grid.Row="1" x:Name="LstSpecialGroups" Background="{DynamicResource Bg2}"
+                                     BorderBrush="{DynamicResource BorderBrush}" SelectionChanged="OnSpecialGroupSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="6,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Nome}" FontSize="12" Foreground="{DynamicResource Fg}" FontWeight="SemiBold"/>
+                                            <Border Grid.Column="1" Background="{DynamicResource Bg3}" CornerRadius="10" Padding="6,1">
+                                                <TextBlock Text="{Binding TotalProcessos}" FontSize="10" Foreground="{DynamicResource FgMuted}"/>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <!-- Ações de Grupo -->
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button Content="+ Novo" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,4,0" Click="OnAddGroupClick"/>
+                                <Button Content="✏️ Renomear" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,4,0" Click="OnRenameGroupClick"/>
+                                <Button Content="🗑️ Excluir" Style="{StaticResource SecondaryButtonStyle}" Click="OnDeleteGroupClick"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Processos do Grupo Selecionado -->
+                    <Border Grid.Column="1" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="14">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                                <TextBlock x:Name="TxtSelectedGroupTitle" Text="Processos do Grupo Selecionado"
+                                           FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="Mover Selecionado:" FontSize="11" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <ComboBox x:Name="CmbAssignGroup" Width="140" Height="26" DisplayMemberPath="Nome" SelectedValuePath="Id"
+                                              SelectionChanged="OnAssignGroupChanged"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <DataGrid Grid.Row="1" x:Name="DgGroupProcesses" AutoGenerateColumns="False" IsReadOnly="True"
+                                      SelectionMode="Single" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                      Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource BorderBrush}"
+                                      BorderThickness="1" RowHeight="38">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="NÚMERO SEI" Binding="{Binding ProtocoloFormatado}" Width="210" FontWeight="Bold"/>
+                                    <DataGridTextColumn Header="TIPO" Binding="{Binding TipoProcesso}" Width="160"/>
+                                    <DataGridTextColumn Header="ÚLTIMO ANDAMENTO" Binding="{Binding UltimaAtividadeDesc}" Width="*"/>
+                                    <DataGridTextColumn Header="DATA" Binding="{Binding UltimaAtividadeData}" Width="130"/>
+                                    <DataGridTemplateColumn Header="AÇÕES" Width="140">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Button Content="✓ Lido" FontSize="10" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,4,0" Click="OnToggleReadRowClick"/>
+                                                    <Button Content="↗ SEI" FontSize="10" Style="{StaticResource SecondaryButtonStyle}" Click="OnOpenInSeiRowClick"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ABA 4: CONFIGURAÇÕES -->
+            <TabItem x:Name="TabSettings" Header="⚙️ Configurações" FontSize="13" FontWeight="SemiBold">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel MaxWidth="900" HorizontalAlignment="Left">
+                        <!-- Card 1: Endpoints SEI -->
+                        <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="🌐 Conexão e Endpoints do SEI" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Fg}" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock Text="Endpoint Primário (WSSEI v2):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtCfgWsseiUrl" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                        <TextBlock Text="Endpoint Fallback (API SEAD):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtCfgSeadUrl" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock Text="Unidade de Lotação (carregada do SEI):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox x:Name="CmbCfgUnidade"
+                                                      Grid.Column="0"
+                                                      Height="28"
+                                                      DisplayMemberPath="Display"
+                                                      SelectedValuePath="Id"
+                                                      TextSearch.TextPath="Sigla"
+                                                      IsTextSearchEnabled="True"
+                                                      Background="{DynamicResource Bg2}"
+                                                      Foreground="{DynamicResource Fg}"
+                                                      BorderBrush="{DynamicResource BorderBrush}"/>
+                                            <Button x:Name="BtnLoadUnits"
+                                                    Grid.Column="1"
+                                                    Content="🔄 Carregar Unidades"
+                                                    Height="28"
+                                                    Padding="10,0"
+                                                    Margin="6,0,0,0"
+                                                    Background="{DynamicResource Bg3}"
+                                                    Foreground="{DynamicResource Fg}"
+                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                    Click="OnLoadUnitsClick"/>
+                                        </Grid>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                        <TextBlock Text="Órgão (SEI / SEAD):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <ComboBox x:Name="CmbCfgOrgao"
+                                                  Height="28"
+                                                  DisplayMemberPath="Display"
+                                                  SelectedValuePath="Sigla"
+                                                  TextSearch.TextPath="Sigla"
+                                                  IsTextSearchEnabled="True"
+                                                  Background="{DynamicResource Bg2}"
+                                                  Foreground="{DynamicResource Fg}"
+                                                  BorderBrush="{DynamicResource BorderBrush}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card 2: Credenciais Windows Credential Manager -->
+                        <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <TextBlock Text="🔒 Credenciais de Acesso (Cofre Nativo do Windows)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                    <Border Background="{DynamicResource Bg3}" CornerRadius="4" Padding="6,2" HorizontalAlignment="Right">
+                                        <TextBlock x:Name="TxtCredStatus" Text="Verificando cofre..." FontSize="10" Foreground="{DynamicResource FgMuted}"/>
+                                    </Border>
+                                </DockPanel>
+                                <TextBlock Text="As credenciais são armazenadas com segurança pelo Windows Credential Manager (Advapi32.dll) e nunca em texto puro ou banco local." FontSize="11" Foreground="{DynamicResource FgDim}" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock Text="Usuário SEI:" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtCfgUsuario" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                        <TextBlock Text="Senha SEI:" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <PasswordBox x:Name="PassCfgSenha" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="💾 Salvar no Windows Credential Manager" Style="{StaticResource PrimaryButtonStyle}" Click="OnSaveCredentialsClick" Margin="0,0,8,0"/>
+                                    <Button Content="🗑️ Remover do Cofre" Style="{StaticResource SecondaryButtonStyle}" Click="OnDeleteCredentialsClick"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card 3: Identificação & Heurísticas -->
+                        <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="👤 Identificação &amp; Palavras-chave do Usuário" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Fg}" Margin="0,0,0,10"/>
+                                <StackPanel Margin="0,0,0,8">
+                                    <TextBlock Text="Nome de Usuário / Matrícula / UPN (Identificação para 'Aberto por Colega'):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                    <TextBox x:Name="TxtCfgNomeUsuario" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Palavras-chave para Heurística 'Destinado a Você' (separadas por vírgula):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                    <TextBox x:Name="TxtCfgKeywords" Height="50" TextWrapping="Wrap" AcceptsReturn="True" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card 4: Polling e Widgets -->
+                        <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="⚡ Polling, Aparência &amp; Comportamento" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Fg}" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock Text="Intervalo de Polling (Minutos):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtCfgIntervaloMinutos" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                        <TextBlock Text="Tema da Interface:" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <ComboBox x:Name="CmbCfgTheme" Height="28" SelectionChanged="OnThemeChanged">
+                                            <ComboBoxItem Content="Dark" IsSelected="True"/>
+                                            <ComboBoxItem Content="Light"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <CheckBox x:Name="ChkCfgDesktopFence" Content="Habilitar Widget Desktop Fence" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                                        <CheckBox x:Name="ChkCfgTaskbarWidget" Content="Habilitar Widget da Barra de Tarefas" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                                        <CheckBox x:Name="ChkCfgStartWithWindows" Content="Iniciar com o Windows" Foreground="{DynamicResource Fg}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <CheckBox x:Name="ChkCfgStartMinimized" Content="Iniciar minimizado na bandeja" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                                        <CheckBox x:Name="ChkCfgCloseToTray" Content="Minimizar para bandeja ao fechar" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <TextBlock Text="Opacidade Fence:" FontSize="11" Foreground="{DynamicResource FgMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <Slider x:Name="SldFenceOpacity" Minimum="0.2" Maximum="1.0" Value="0.92" Width="140" SmallChange="0.05"/>
+                                            <TextBlock Text="{Binding Value, ElementName=SldFenceOpacity, StringFormat={}{0:P0}}" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Botão Salvar Geral -->
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="💾 Salvar Todas as Configurações" Style="{StaticResource PrimaryButtonStyle}" Click="OnSaveAllSettingsClick" Margin="0,0,8,0"/>
+                            <Button Content="🧪 Testar Conexão com SEI" Style="{StaticResource SecondaryButtonStyle}" Click="OnTestConnectionClick"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ABA 5: LOGS OPERACIONAIS -->
+            <TabItem x:Name="TabLogs" Header="📜 Logs" FontSize="13" FontWeight="SemiBold">
+                <Grid Margin="20">
+                    <Grid.RowDefinitions>
+                        <!-- Barra de Ações de Log -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- DataGrid de Logs -->
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Barra de Ações de Log -->
+                    <Border Grid.Row="0" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="TxtSearchLogs" Grid.Column="0" Height="28" FontSize="12"
+                                     Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}"
+                                     BorderBrush="{DynamicResource BorderBrush}" Padding="6,2"
+                                     VerticalContentAlignment="Center" TextChanged="OnSearchLogsTextChanged"
+                                     ToolTip="Buscar no texto das mensagens de log..."/>
+
+                            <ComboBox x:Name="CmbLogLevelFilter" Grid.Column="1" Width="130" Height="28" Margin="8,0,0,0"
+                                      SelectionChanged="OnLogLevelFilterChanged">
+                                <ComboBoxItem Content="TODOS OS NÍVEIS" IsSelected="True"/>
+                                <ComboBoxItem Content="INFO"/>
+                                <ComboBoxItem Content="WARN"/>
+                                <ComboBoxItem Content="ERROR"/>
+                            </ComboBox>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
+                                <Button Content="🔄 Atualizar" Style="{StaticResource SecondaryButtonStyle}" Click="OnRefreshLogsClick" Margin="0,0,4,0"/>
+                                <Button Content="🗑️ Limpar Logs" Style="{StaticResource SecondaryButtonStyle}" Click="OnClearLogsClick"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- DataGrid de Logs -->
+                    <DataGrid Grid.Row="1" x:Name="DgLogs" AutoGenerateColumns="False" IsReadOnly="True"
+                              SelectionMode="Extended" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1" RowHeight="32">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="DATA / HORA" Binding="{Binding CreatedAt}" Width="160" FontFamily="Cascadia Mono, Consolas, Courier New"/>
+                            <DataGridTextColumn Header="NÍVEL" Binding="{Binding Level}" Width="90" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="MENSAGEM" Binding="{Binding Message}" Width="*" FontFamily="Cascadia Mono, Consolas, Courier New"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- 3. Barra de Status Inferior -->
+        <Border Grid.Row="2" Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">
+            <DockPanel VerticalAlignment="Center">
+                <TextBlock x:Name="TxtBottomStatus" Text="SEI Monitor Operacional" FontSize="11" Foreground="{DynamicResource FgDim}"/>
+                <TextBlock x:Name="TxtProcessCountStatus" Text="0 processos carregados" FontSize="11" Foreground="{DynamicResource FgDim}" HorizontalAlignment="Right"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
