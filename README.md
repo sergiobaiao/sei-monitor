@@ -32,7 +32,7 @@ Monitor desktop inteligente de processos do **SEI! (Sistema Eletrônico de Infor
 ### 4. Motor de Polling Leve & Cache Local
 - **Consulta Econômica (`limit=1`)**: Leitura rápida da contagem de documentos e timestamp da última atividade (`documento/listar?limit=1` e `atividade/listar?limit=1`).
 - **Comparação Inteligente de Cache**: Apenas busca a árvore detalhada de documentos se houver divergência entre o SEI e o cache do SQLite, reduzindo o tempo de consulta de segundos para milissegundos.
-- **Resiliência e Fallback**: Conexão primária via WSSEI v2 com suporte a fallback automático para API SEAD (`api.sei.pi.gov.br`) e renovação transparente de sessão no HTTP 401.
+- **Resiliência e Fallback**: Ordem configurável entre WSSEI v2 e SEAD, com renovação de sessão no HTTP 401 ou 403.
 - **Sanitização Preventiva Anti-Vazamento Solr**: Supressão obrigatória de campos `mensagem` e `exception` em erros do WSSEI para impedir exposição acidental de credenciais.
 
 ### 5. Segurança & Gerenciamento de Instância
@@ -122,4 +122,8 @@ Ao abrir o monitor pela primeira vez:
    - **Usuário e Senha**: Salvos de forma segura no Windows Credential Manager.
    - **Palavras-chave do Usuário**: Seus nomes, apelidos ou matrículas separados por vírgula para ativar a heurística de "Destinado a Você".
    - **Intervalo de Polling**: Tempo em minutos entre cada verificação leve (padrão: 5 min).
+   - **Ordem das APIs**: Escolha a API primária e a de fallback entre WSSEI v2 e SEAD.
+   - **Temas**: Escolha claro ou escuro separadamente para a interface e o Desktop Fence.
 3. Clique em **Salvar Credenciais & Configurações** e em seguida em **Sincronizar Agora**.
+
+Na aba **Logs**, **Copiar logs** envia os registros exibidos para a área de transferência. A cópia respeita a busca e o filtro de nível.

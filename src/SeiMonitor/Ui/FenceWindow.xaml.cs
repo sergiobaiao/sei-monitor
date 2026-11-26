@@ -44,6 +44,8 @@ public partial class FenceWindow : Window
         _poller = poller ?? throw new ArgumentNullException(nameof(poller));
         _shell = shell ?? Win32ShellInterop.Instance;
         _uiDispatcher = dispatcher ?? new WpfDispatcher(Dispatcher);
+        Theme.Apply(Resources, _config.FenceTheme);
+        _config.SettingChanged += OnSettingChanged;
 
         _viewModel = new FenceViewModel(_config, _db, _poller, _uiDispatcher, _shell);
         DataContext = _viewModel;
@@ -109,8 +111,15 @@ public partial class FenceWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _watchdogTimer.Stop();
+        _config.SettingChanged -= OnSettingChanged;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         _viewModel.Dispose();
+    }
+
+    private void OnSettingChanged(string setting)
+    {
+        if (setting == nameof(Config.FenceTheme))
+            _uiDispatcher.Invoke(() => Theme.Apply(Resources, _config.FenceTheme));
     }
 
     private void PinToProgman()

@@ -594,6 +594,35 @@ public class UiMilestone4Tests : IDisposable
         });
     }
 
+    [Fact]
+    public void G10_DesktopFenceTheme_IsIndependentAndReactsToSavedChanges()
+    {
+        _config.Theme = "Light";
+        _config.CloseToTray = false;
+        RunInSta(() =>
+        {
+            var main = new MainWindow(_config, _db, _mockPoller, dispatcher: _dispatcher);
+            var fence = new FenceWindow(_config, _db, _mockPoller, _mockShell, _dispatcher);
+            try
+            {
+                Assert.Equal("Light", _config.Theme);
+                Assert.Equal("Light", ((System.Windows.Controls.ComboBox)main.FindName("CmbCfgTheme")).SelectedValue);
+                Assert.Equal(Theme.Brush("#18181b").Color, ((SolidColorBrush)fence.Resources["Bg1"]).Color);
+
+                _config.FenceTheme = "Light";
+                Assert.Equal("Light", new Config(_db).FenceTheme);
+                Assert.Equal(Theme.Brush("#ffffff").Color, ((SolidColorBrush)fence.Resources["Bg1"]).Color);
+                _config.Theme = "Dark";
+                Assert.Equal(Theme.Brush("#ffffff").Color, ((SolidColorBrush)fence.Resources["Bg1"]).Color);
+            }
+            finally
+            {
+                fence.Close();
+                main.Close();
+            }
+        });
+    }
+
     private static void RunInSta(Action action)
     {
         Exception? error = null;

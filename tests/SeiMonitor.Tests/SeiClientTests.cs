@@ -363,17 +363,79 @@ public class SeiClientTests
     }
 
     [Fact]
+    public async Task ChangingPrimaryApi_ReplacesCachedSessionAndUsesSeadFirst()
+    {
+        var handler = new MockHttpMessageHandler();
+        handler.SetupResponse("/autenticar", HttpStatusCode.OK, """{"data":{"token":"wssei_token"}}""");
+        handler.SetupResponse("/usuarios/login", HttpStatusCode.OK, """{"Token":"sead_token"}""");
+        handler.Setup(req => req.RequestUri?.AbsolutePath.EndsWith("/procedimentos") == true, req =>
+        {
+            Assert.Equal("sead_token", Assert.Single(req.Headers.GetValues("token")));
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") };
+        });
+        using var client = new SeiClient(_config, _db, handler, ("usuario.servico", "senha123"));
+        Assert.Equal("WSSEI", (await client.AuthenticateAsync()).SourceApi);
+
+        _config.PrimaryApi = "SEAD";
+        await client.SearchProcessesAsync("110000001");
+
+        Assert.Equal("SEAD", client.ActiveApiSource);
+        Assert.Equal(3, handler.TotalRequests);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SeadAsPrimary_UsesWsseiFallbackOnLoginOrOperationFailure(bool failLogin)
+    {
+        _config.PrimaryApi = "SEAD";
+        var handler = new MockHttpMessageHandler();
+        handler.SetupResponse("/usuarios/login", failLogin ? HttpStatusCode.Forbidden : HttpStatusCode.OK,
+            """{"Token":"sead_token"}""");
+        handler.SetupResponse("/procedimentos", HttpStatusCode.ServiceUnavailable, "");
+        handler.SetupResponse("/autenticar", HttpStatusCode.OK, """{"data":{"token":"wssei_token"}}""");
+        handler.Setup(req => req.RequestUri?.AbsolutePath.EndsWith("/processo/pesquisar") == true, req =>
+        {
+            Assert.Equal("wssei_token", Assert.Single(req.Headers.GetValues("token")));
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"sucesso":true,"total":0,"data":[]}""")
+            };
+        });
+
+        using var client = new SeiClient(_config, _db, handler, ("usuario.servico", "senha123"));
+        await client.SearchProcessesAsync("110000001");
+
+        Assert.EndsWith("/usuarios/login", handler.RequestsReceived[0].RequestUri!.AbsolutePath);
+        Assert.Equal(failLogin ? 3 : 4, handler.TotalRequests);
+    }
+
+    [Fact]
+    public async Task WsseiLogin_LoadsUnitsInConfiguredOrder()
+    {
+        var handler = new MockHttpMessageHandler();
+        handler.SetupResponse("/autenticar", HttpStatusCode.OK,
+            """{"data":{"token":"wssei_token","unidades":[{"id":"110000001","sigla":"GINFO"}]}}""");
+
+        using var client = new SeiClient(_config, _db, handler, ("usuario.servico", "senha123"));
+        var unit = Assert.Single(await client.GetUserUnitsAsync());
+        Assert.Equal("110000001", unit.Id);
+        Assert.Equal(1, handler.TotalRequests);
+    }
+
+    [Fact]
     public async Task SeadLogin_LoadsUnitsFromIdField()
     {
         var handler = new MockHttpMessageHandler();
         handler.SetupResponse("/usuarios/login", HttpStatusCode.OK,
-            """{"Token":"sead_token","Unidades":[{"Id":"110000001","Sigla":"GINFO"}]}""");
+            """{"Token":"sead_token","Unidades":[{"Id":"110000001","Sigla":"GINFO","Descricao":"Gerência"}]}""");
 
         using var client = new SeiClient(_config, _db, handler, ("usuario.servico", "senha123"));
         var unit = Assert.Single(await client.GetUserUnitsAsync());
 
         Assert.Equal("110000001", unit.Id);
         Assert.Equal("GINFO", unit.Sigla);
+        Assert.Equal("GINFO (110000001) — Gerência", unit.Display);
     }
 
     [Fact]

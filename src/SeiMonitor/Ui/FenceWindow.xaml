@@ -17,8 +17,8 @@
     </Window.Resources>
 
     <Border x:Name="RootBorder"
-            Background="#E618181B"
-            BorderBrush="#33FFFFFF"
+            Background="{DynamicResource OverlaySurface}"
+            BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
             CornerRadius="12"
             Padding="0">
@@ -39,7 +39,7 @@
             <!-- Cabeçalho -->
             <Border Grid.Row="0"
                     x:Name="HeaderBorder"
-                    Background="#202024"
+                    Background="{DynamicResource Bg2}"
                     CornerRadius="11,11,0,0"
                     Padding="10,8"
                     Cursor="SizeAll"
@@ -52,8 +52,8 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="⚡" FontSize="13" Foreground="#0078D4" Margin="0,0,6,0"/>
-                        <TextBlock Text="SEI Monitor" FontWeight="Bold" FontSize="12" Foreground="#F4F4F5"/>
+                        <TextBlock Text="⚡" FontSize="13" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                        <TextBlock Text="SEI Monitor" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource Fg}"/>
                     </StackPanel>
 
                     <!-- Dropdown de Grupos -->
@@ -74,7 +74,7 @@
                                 FontSize="12"
                                 Width="24" Height="24"
                                 Background="Transparent"
-                                Foreground="#A1A1AA"
+                                Foreground="{DynamicResource FgMuted}"
                                 BorderThickness="0"
                                 Cursor="Hand"
                                 ToolTip="Sincronizar agora"
@@ -85,7 +85,7 @@
                                 FontSize="12"
                                 Width="24" Height="24"
                                 Background="Transparent"
-                                Foreground="#A1A1AA"
+                                Foreground="{DynamicResource FgMuted}"
                                 BorderThickness="0"
                                 Cursor="Hand"
                                 ToolTip="Recolher / Expandir"
@@ -104,35 +104,35 @@
                 <!-- 4 Pills de Contagem -->
                 <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,8">
                     <!-- Pill Monitorados -->
-                    <Border Background="#1E1E24" BorderBrush="#374151" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
+                    <Border Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource PillMonitoredBrush}" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="📂" FontSize="10" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="TxtCntMonitored" Text="0" FontWeight="Bold" FontSize="12" Foreground="#A78BFA" HorizontalAlignment="Center"/>
-                            <TextBlock Text="MONITORADOS" FontSize="7" FontWeight="SemiBold" Foreground="#DDD6FE" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="TxtCntMonitored" Text="0" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="MONITORADOS" FontSize="7" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <!-- Pill Novos Andamentos -->
-                    <Border Background="#10202E" BorderBrush="#1E3A8A" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
+                    <Border Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource PillNewDocsBrush}" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="⚡" FontSize="10" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="TxtCntNewDocs" Text="0" FontWeight="Bold" FontSize="12" Foreground="#60A5FA" HorizontalAlignment="Center"/>
-                            <TextBlock Text="NOVOS" FontSize="7" FontWeight="SemiBold" Foreground="#BFDBFE" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="TxtCntNewDocs" Text="0" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="NOVOS" FontSize="7" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <!-- Pill Para Mim -->
-                    <Border Background="#102E20" BorderBrush="#065F46" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
+                    <Border Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource PillDestinedBrush}" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="🎯" FontSize="10" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="TxtCntDestined" Text="0" FontWeight="Bold" FontSize="12" Foreground="#34D399" HorizontalAlignment="Center"/>
-                            <TextBlock Text="PARA MIM" FontSize="7" FontWeight="SemiBold" Foreground="#A7F3D0" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="TxtCntDestined" Text="0" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="PARA MIM" FontSize="7" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <!-- Pill Terceiros -->
-                    <Border Background="#2E2310" BorderBrush="#78350F" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
+                    <Border Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource PillAttentionBrush}" BorderThickness="1" CornerRadius="6" Padding="4,4" Margin="2,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="👁️" FontSize="10" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="TxtCntAttention" Text="0" FontWeight="Bold" FontSize="12" Foreground="#FBBF24" HorizontalAlignment="Center"/>
-                            <TextBlock Text="TERCEIROS" FontSize="7" FontWeight="SemiBold" Foreground="#FDE68A" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="TxtCntAttention" Text="0" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="TERCEIROS" FontSize="7" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </UniformGrid>
@@ -142,8 +142,8 @@
                     <ItemsControl x:Name="ListProcesses">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1E1E24"
-                                        BorderBrush="#2E2E33"
+                                <Border Background="{DynamicResource Bg2}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
                                         CornerRadius="6"
                                         Padding="8,6"
@@ -154,11 +154,11 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <DockPanel Grid.Row="0">
-                                            <TextBlock Text="{Binding ProtocoloFormatado}" FontWeight="Bold" FontSize="11" Foreground="#F4F4F5"/>
+                                            <TextBlock Text="{Binding ProtocoloFormatado}" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource Fg}"/>
                                             <TextBlock Text="🎯" Visibility="{Binding DestinadoAoUsuario, Converter={StaticResource BoolToVis}}"
-                                                       Foreground="#34D399" FontSize="10" Margin="4,0,0,0" ToolTip="Destinado a você"/>
+                                                       Foreground="{DynamicResource Fg}" FontSize="10" Margin="4,0,0,0" ToolTip="Destinado a você"/>
                                         </DockPanel>
-                                        <TextBlock Grid.Row="1" Text="{Binding UltimaAtividadeDesc}" FontSize="10" Foreground="#A1A1AA"
+                                        <TextBlock Grid.Row="1" Text="{Binding UltimaAtividadeDesc}" FontSize="10" Foreground="{DynamicResource FgMuted}"
                                                    TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                                     </Grid>
                                 </Border>
@@ -179,7 +179,7 @@
                            Grid.Column="0"
                            Text="Aguardando sincronização..."
                            FontSize="10"
-                           Foreground="#71717A"
+                           Foreground="{DynamicResource FgMuted}"
                            VerticalAlignment="Center"/>
 
                 <!-- Thumb de Redimensionamento -->
@@ -192,7 +192,7 @@
                         <ControlTemplate TargetType="Thumb">
                             <TextBlock Text="⤡"
                                        FontSize="13"
-                                       Foreground="#71717A"
+                                       Foreground="{DynamicResource FgMuted}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                         </ControlTemplate>

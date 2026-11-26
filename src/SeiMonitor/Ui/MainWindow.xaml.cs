@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -53,10 +54,10 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // Aplica o tema configurado
-        if (Application.Current != null)
-            Theme.Apply(Application.Current.Resources, _config.Theme);
-        else
-            Theme.Apply(Resources, _config.Theme);
+        Theme.Apply(Application.Current?.Resources ?? Resources, _config.Theme);
+        CmbCfgTheme.SelectedValue = string.Equals(_config.Theme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+        CmbCfgFenceTheme.SelectedValue = _config.FenceTheme;
+        CmbCfgPrimaryApi.SelectedValue = _config.PrimaryApi;
 
         // Assinatura aos eventos do poller de background
         _poller.ProcessChanged += OnPollerProcessChanged;
@@ -514,6 +515,8 @@ public partial class MainWindow : Window
                 _config.SeiWsseiOrgao = selectedOrgao.Id;
                 _config.SeiSeadOrgao = selectedOrgao.Sigla;
             }
+            if (CmbCfgPrimaryApi.SelectedValue is string primaryApi)
+                _config.PrimaryApi = primaryApi;
 
             _config.SeiUsuarioNome = TxtCfgNomeUsuario.Text.Trim();
             _config.UserKeywordsRaw = TxtCfgKeywords.Text.Trim();
@@ -528,26 +531,20 @@ public partial class MainWindow : Window
             _config.FenceOpacity = SldFenceOpacity.Value;
             Config.StartWithWindows = ChkCfgStartWithWindows.IsChecked == true;
 
+            if (CmbCfgTheme.SelectedValue is string theme)
+            {
+                _config.Theme = theme;
+                Theme.Apply(Application.Current?.Resources ?? Resources, theme);
+            }
+            if (CmbCfgFenceTheme.SelectedValue is string fenceTheme)
+                _config.FenceTheme = fenceTheme;
+
             LoadHeaderInfo();
             MessageBox.Show("Todas as configurações foram salvas com sucesso!", "Configurações", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Erro ao salvar configurações: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void OnThemeChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_config == null) return;
-        if (CmbCfgTheme?.SelectedItem is ComboBoxItem item)
-        {
-            string theme = item.Content?.ToString() ?? "Dark";
-            _config.Theme = theme;
-            if (Application.Current != null)
-                Theme.Apply(Application.Current.Resources, theme);
-            else
-                Theme.Apply(Resources, theme);
         }
     }
 
@@ -598,6 +595,28 @@ public partial class MainWindow : Window
     private void OnSearchLogsTextChanged(object sender, TextChangedEventArgs e) => ApplyLogFilters();
     private void OnLogLevelFilterChanged(object sender, SelectionChangedEventArgs e) => ApplyLogFilters();
     private void OnRefreshLogsClick(object sender, RoutedEventArgs e) => RefreshLogs();
+
+    private void OnCopyLogsClick(object sender, RoutedEventArgs e)
+    {
+        var lines = DgLogs.Items.OfType<LogEntry>()
+            .Select(log => $"{log.CreatedAt} [{log.Level}] {Database.SanitizeLogMessage(log.Message)}")
+            .ToArray();
+        if (lines.Length == 0)
+        {
+            TxtBottomStatus.Text = "Nenhum log exibido para copiar.";
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(string.Join(Environment.NewLine, lines));
+            TxtBottomStatus.Text = $"{lines.Length} registro(s) copiado(s).";
+        }
+        catch (ExternalException)
+        {
+            TxtBottomStatus.Text = "Área de transferência indisponível. Tente novamente.";
+        }
+    }
 
     private void OnClearLogsClick(object sender, RoutedEventArgs e)
     {

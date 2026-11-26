@@ -14,7 +14,7 @@
         MouseLeftButtonUp="OnWidgetMouseClick">
 
     <Border x:Name="PillBorder"
-            Background="Transparent"
+            Background="{DynamicResource OverlaySurface}"
             BorderThickness="0"
             CornerRadius="0"
             Padding="8,0,8,0"
@@ -29,25 +29,25 @@
                 <!-- Monitorados -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,10,0" ToolTip="Monitorados">
                     <TextBlock Text="📂" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                    <TextBlock x:Name="TxtIndMonitorados" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="#C4B5FD" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtIndMonitorados" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Novos Andamentos -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,10,0" ToolTip="Novos Andamentos">
                     <TextBlock Text="⚡" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                    <TextBlock x:Name="TxtIndNovos" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="#93C5FD" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtIndNovos" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Para Mim -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,10,0" ToolTip="Destinados a Você">
                     <TextBlock Text="🎯" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                    <TextBlock x:Name="TxtIndParaMim" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="#6EE7B7" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtIndParaMim" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Terceiros -->
                 <StackPanel Orientation="Horizontal" ToolTip="Abertos por Terceiro (GINFO)">
                     <TextBlock Text="👁️" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                    <TextBlock x:Name="TxtIndTerceiros" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="#FCD34D" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtIndTerceiros" Text="0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" VerticalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
 
@@ -78,7 +78,7 @@
                                    Text=""
                                    FontSize="12"
                                    FontWeight="SemiBold"
-                                   Foreground="#F4F4F5"
+                                   Foreground="{DynamicResource Fg}"
                                    VerticalAlignment="Center">
                             <TextBlock.RenderTransform>
                                 <TranslateTransform x:Name="TickerTransform" X="0" Y="0"/>

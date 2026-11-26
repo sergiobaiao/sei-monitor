@@ -141,13 +141,14 @@ public partial class TaskbarFlyoutWindow : Window
 
         if (_viewModel.Destinados.Count == 0)
         {
-            PanelDestinados.Children.Add(new TextBlock
+            var empty = new TextBlock
             {
                 Text = "Nenhum processo destinado pendente.",
                 FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x71, 0x71, 0x7A)),
                 Margin = new Thickness(0, 4, 0, 4)
-            });
+            };
+            empty.SetResourceReference(TextBlock.ForegroundProperty, "FgDim");
+            PanelDestinados.Children.Add(empty);
         }
         else
         {
@@ -163,13 +164,14 @@ public partial class TaskbarFlyoutWindow : Window
 
         if (_viewModel.UltimasMovimentacoes.Count == 0)
         {
-            PanelMovimentacoes.Children.Add(new TextBlock
+            var empty = new TextBlock
             {
                 Text = "Nenhuma movimentação registrada.",
                 FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x71, 0x71, 0x7A)),
                 Margin = new Thickness(0, 4, 0, 4)
-            });
+            };
+            empty.SetResourceReference(TextBlock.ForegroundProperty, "FgDim");
+            PanelMovimentacoes.Children.Add(empty);
         }
         else
         {
@@ -186,17 +188,13 @@ public partial class TaskbarFlyoutWindow : Window
     {
         var border = new Border
         {
-            Background = isPriority
-                ? new SolidColorBrush(Color.FromArgb(0x30, 0xEF, 0x44, 0x44))
-                : new SolidColorBrush(Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF)),
-            BorderBrush = isPriority
-                ? new SolidColorBrush(Color.FromRgb(0x7F, 0x1D, 0x1D))
-                : new SolidColorBrush(Color.FromRgb(0x2E, 0x2E, 0x33)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(6),
             Padding = new Thickness(8, 6, 8, 6),
             Margin = new Thickness(0, 0, 0, 6)
         };
+        border.SetResourceReference(Border.BackgroundProperty, "Bg3");
+        border.SetResourceReference(Border.BorderBrushProperty, isPriority ? "UrgentBrush" : "BorderBrush");
 
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -210,9 +208,9 @@ public partial class TaskbarFlyoutWindow : Window
         {
             Text = proc.ProtocoloFormatado,
             FontWeight = FontWeights.Bold,
-            FontSize = 11,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xF4, 0xF4, 0xF5))
+            FontSize = 11
         };
+        txtProtocolo.SetResourceReference(TextBlock.ForegroundProperty, "Fg");
         titlePanel.Children.Add(txtProtocolo);
 
         if (proc.AbertoPorTerceiro)
@@ -239,14 +237,15 @@ public partial class TaskbarFlyoutWindow : Window
         // Descrição do último andamento
         if (!string.IsNullOrWhiteSpace(proc.UltimaAtividadeDesc))
         {
-            textStack.Children.Add(new TextBlock
+            var activity = new TextBlock
             {
                 Text = proc.UltimaAtividadeDesc,
                 FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xA1, 0xA1, 0xAA)),
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 Margin = new Thickness(0, 2, 0, 0)
-            });
+            };
+            activity.SetResourceReference(TextBlock.ForegroundProperty, "FgMuted");
+            textStack.Children.Add(activity);
         }
 
         grid.Children.Add(textStack);
@@ -262,10 +261,10 @@ public partial class TaskbarFlyoutWindow : Window
             Height = 24,
             Cursor = Cursors.Hand,
             Background = Brushes.Transparent,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xA1, 0xA1, 0xAA)),
             BorderThickness = new Thickness(0),
             VerticalAlignment = VerticalAlignment.Center
         };
+        btnOpen.SetResourceReference(Button.ForegroundProperty, "FgMuted");
         btnOpen.Click += (_, _) => OpenProcessInBrowser(proc);
 
         grid.Children.Add(btnOpen);

@@ -53,6 +53,7 @@ public static class Theme
         res["Bg1"] = isDark ? Brush("#18181b") : Brush("#ffffff"); // Cartão / Superfície
         res["Bg2"] = isDark ? Brush("#202024") : Brush("#f1f5f9"); // Header / Barra superior
         res["Bg3"] = isDark ? Brush("#27272a") : Brush("#e2e8f0"); // Inputs / Hover / Pills
+        res["OverlaySurface"] = isDark ? Brush("#E618181b") : Brush("#E6ffffff");
 
         // Foregrounds / Tipografia
         res["Fg"] = isDark ? Brush("#f4f4f5") : Brush("#0f172a");       // Texto primário

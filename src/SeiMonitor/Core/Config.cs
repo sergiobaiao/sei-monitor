@@ -120,6 +120,12 @@ public sealed class Config : INotifyPropertyChanged
         set => SetStr("sei_sead_usuario", value.Trim());
     }
 
+    public string PrimaryApi
+    {
+        get => Str("sei_primary_api", "WSSEI") == "SEAD" ? "SEAD" : "WSSEI";
+        set => SetStr("sei_primary_api", value == "SEAD" ? "SEAD" : "WSSEI");
+    }
+
     /// <summary>ID numérico da unidade SEI de leitura e consulta (ex: 110000000).</summary>
     public string SeiUnidade
     {
@@ -254,6 +260,12 @@ public sealed class Config : INotifyPropertyChanged
     {
         get => Str("app_theme", "Dark");
         set => SetStr("app_theme", string.IsNullOrWhiteSpace(value) ? "Dark" : value.Trim());
+    }
+
+    public string FenceTheme
+    {
+        get => Str("fence_theme", "Dark");
+        set => SetStr("fence_theme", value == "Light" ? "Light" : "Dark");
     }
 
     // ==========================================

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -275,7 +276,7 @@ public partial class TaskbarWidgetWindow : Window
         _isMouseOver = true;
         _viewModel.Pause();
         _currentClock?.Controller?.Pause();
-        PillBorder.Background = new SolidColorBrush(Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));
+        PillBorder.SetResourceReference(Border.BackgroundProperty, "Bg3");
     }
 
     private void OnWidgetMouseLeave(object sender, MouseEventArgs e)
@@ -283,7 +284,7 @@ public partial class TaskbarWidgetWindow : Window
         _isMouseOver = false;
         _viewModel.Resume();
         _currentClock?.Controller?.Resume();
-        PillBorder.Background = Brushes.Transparent;
+        PillBorder.SetResourceReference(Border.BackgroundProperty, "OverlaySurface");
     }
 
     private void OnWidgetMouseClick(object sender, MouseButtonEventArgs e)

@@ -11,9 +11,16 @@ namespace SeiMonitor.Core;
 
 public sealed record SeiUnidadeItem(string Id, string Sigla, string Descricao)
 {
-    public string Display => string.IsNullOrWhiteSpace(Descricao)
-        ? (string.IsNullOrWhiteSpace(Id) ? Sigla : $"{Sigla} ({Id})")
-        : $"{Sigla} — {Descricao}";
+    public string Display
+    {
+        get
+        {
+            var label = string.IsNullOrWhiteSpace(Sigla) ? Id : Sigla;
+            if (!string.IsNullOrWhiteSpace(Id) && label != Id)
+                label += $" ({Id})";
+            return string.IsNullOrWhiteSpace(Descricao) ? label : $"{label} — {Descricao}";
+        }
+    }
 }
 
 public sealed record SeiOrgaoItem(string Id, string Sigla)
@@ -61,7 +68,7 @@ public interface ISeiClient : IDisposable
 }
 
 /// <summary>
-/// Cliente resiliente de integração HTTP com o SEI (WSSEI v2 primário e SEAD fallback).
+/// Cliente resiliente de integração HTTP com o SEI, com prioridade configurável entre WSSEI v2 e SEAD.
 /// Implementa autenticação lazy com SemaphoreSlim, renovação automática no 401 ou 403,
 /// injeção dos cabeçalhos obrigatórios e descarte incondicional de erros para sanitização contra o bug do Solr.
 /// </summary>
@@ -75,6 +82,8 @@ public sealed class SeiClient : ISeiClient
     private readonly SemaphoreSlim _authLock = new(1, 1);
 
     private volatile SeiAuthResult? _session;
+    private string? _sessionPrimaryApi;
+    private SeiAuthResult? _wsseiSession;
     private SeiAuthResult? _seadSession;
 
     public SeiClient(
@@ -108,34 +117,32 @@ public sealed class SeiClient : ISeiClient
     }
 
     public string? CachedToken => _session?.Token;
-    public string ActiveApiSource => _session?.SourceApi ?? "WSSEI";
+    public string ActiveApiSource => _session?.SourceApi ?? _config.PrimaryApi;
 
     // =========================================================================
-    // 1. Autenticação Lazy e SemaphoreSlim(1,1) Double-Checked Locking
+    // 1. Autenticação lazy e cache por API
     // =========================================================================
 
     public async Task<SeiAuthResult> AuthenticateAsync(bool forceRenew = false, CancellationToken ct = default)
     {
-        if (!forceRenew && _session is { } session)
-        {
-            return session;
-        }
-
         await _authLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (!forceRenew && _session is { } cached)
+            var primaryApi = _config.PrimaryApi;
+            if (!forceRenew && _sessionPrimaryApi == primaryApi && _session is { } cached)
             {
                 return cached;
             }
 
-            if (forceRenew)
+            if (forceRenew || _sessionPrimaryApi != primaryApi)
             {
                 _session = null;
+                _wsseiSession = null;
                 _seadSession = null;
             }
 
-            return await AuthenticateInternalAsync(ct).ConfigureAwait(false);
+            _sessionPrimaryApi = primaryApi;
+            return await AuthenticateInternalAsync(primaryApi, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -143,37 +150,39 @@ public sealed class SeiClient : ISeiClient
         }
     }
 
-    private async Task<SeiAuthResult> AuthenticateInternalAsync(CancellationToken ct)
+    private async Task<SeiAuthResult> AuthenticateInternalAsync(string primaryApi, CancellationToken ct)
     {
-        Exception? wsseiError = null;
+        var fallback = OtherApi(primaryApi);
         try
         {
-            var token = await AuthenticateWsseiAsync(ct).ConfigureAwait(false);
-            return _session = new SeiAuthResult(token, "WSSEI", DateTime.UtcNow);
+            return _session = await LoginToApiAsync(primaryApi, ct).ConfigureAwait(false);
         }
-        catch (Exception ex) when (!ct.IsCancellationRequested && (IsTransientOrDown(ex) ||
-            ex is SeiException { ErrorCode: SeiErrorCode.AcessoNegado or SeiErrorCode.RespostaInvalida }))
+        catch (Exception primaryError) when (!ct.IsCancellationRequested && CanFallbackOnLogin(primaryError))
         {
-            wsseiError = ex;
-            _db.Log("WARN", "Autenticação no WSSEI v2 falhou. Tentando fallback SEAD...");
-        }
-
-        if (wsseiError != null)
-        {
+            _db.Log("WARN", $"Autenticação em {primaryApi} falhou. Tentando {fallback}.");
             try
             {
-                var token = await AuthenticateSeadAsync(ct).ConfigureAwait(false);
-                return _session = _seadSession = new SeiAuthResult(token, "SEAD", DateTime.UtcNow);
+                return _session = await LoginToApiAsync(fallback, ct).ConfigureAwait(false);
             }
             catch (Exception) when (!ct.IsCancellationRequested)
             {
-                _db.Log("ERROR", "Falha também na autenticação de fallback da SEAD.");
-                // Conforme APIS-SEI.md e especificação: lança a exceção primária do WSSEI
-                throw wsseiError;
+                _db.Log("ERROR", $"Falha também na autenticação em {fallback}.");
             }
+
+            throw;
+        }
+    }
+
+    private async Task<SeiAuthResult> LoginToApiAsync(string api, CancellationToken ct)
+    {
+        if (api == "SEAD")
+        {
+            return _seadSession ??= new SeiAuthResult(
+                await AuthenticateSeadAsync(ct).ConfigureAwait(false), api, DateTime.UtcNow);
         }
 
-        throw new SeiException(SeiErrorCode.Indisponivel);
+        return _wsseiSession ??= new SeiAuthResult(
+            await AuthenticateWsseiAsync(ct).ConfigureAwait(false), api, DateTime.UtcNow);
     }
 
     private async Task<string> AuthenticateWsseiAsync(CancellationToken ct)
@@ -227,12 +236,15 @@ public sealed class SeiClient : ISeiClient
             }
 
             var jsonBytes = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
-            return ExtractWsseiToken(jsonBytes);
+            var token = ExtractWsseiToken(jsonBytes, out var units);
+            _cachedWsseiUnits = units;
+            return token;
         }
     }
 
-    private static string ExtractWsseiToken(byte[] jsonBytes)
+    private static string ExtractWsseiToken(byte[] jsonBytes, out List<SeiUnidadeItem> units)
     {
+        units = new List<SeiUnidadeItem>();
         JsonDocument doc;
         try
         {
@@ -258,6 +270,23 @@ public sealed class SeiClient : ISeiClient
                     var token = tokenProp.GetString();
                     if (!string.IsNullOrWhiteSpace(token))
                     {
+                        if (dataProp.TryGetProperty("unidades", out var unitsProp) && unitsProp.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var unit in unitsProp.EnumerateArray())
+                            {
+                                if (unit.ValueKind == JsonValueKind.Object && unit.TryGetProperty("id", out var id) &&
+                                    id.ValueKind is JsonValueKind.String or JsonValueKind.Number)
+                                {
+                                    var value = id.ToString();
+                                    if (!string.IsNullOrWhiteSpace(value))
+                                    {
+                                        var sigla = unit.TryGetProperty("sigla", out var prop) && prop.ValueKind == JsonValueKind.String
+                                            ? prop.GetString() ?? value : value;
+                                        units.Add(new SeiUnidadeItem(value, sigla, ""));
+                                    }
+                                }
+                            }
+                        }
                         return token;
                     }
                 }
@@ -322,28 +351,25 @@ public sealed class SeiClient : ISeiClient
 
             var jsonBytes = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
             var token = ExtractSeadToken(jsonBytes, _config.SeiUnidadeSigla, out _resolvedSeadUnitId, out var units);
-            if (units.Count > 0)
-            {
-                _cachedUserUnits = units;
-            }
+            _cachedSeadUnits = units;
             return token;
         }
     }
 
     private string? _resolvedSeadUnitId;
-    private List<SeiUnidadeItem> _cachedUserUnits = new();
+    private List<SeiUnidadeItem> _cachedWsseiUnits = new();
+    private List<SeiUnidadeItem> _cachedSeadUnits = new();
 
     public async Task<string?> ResolveUnitIdAsync(string? sigla, CancellationToken ct = default)
     {
-        if (!string.IsNullOrWhiteSpace(_resolvedSeadUnitId))
-            return _resolvedSeadUnitId;
-
         try
         {
-            await AuthenticateSeadAsync(ct).ConfigureAwait(false);
-            return _resolvedSeadUnitId;
+            var units = await GetUserUnitsAsync(ct: ct).ConfigureAwait(false);
+            return units.Find(unit => string.Equals(unit.Sigla, sigla, StringComparison.OrdinalIgnoreCase))?.Id
+                ?? (ActiveApiSource == "SEAD" || units.Count == 0 ? _resolvedSeadUnitId : null)
+                ?? (units.Count > 0 ? units[0].Id : null);
         }
-        catch
+        catch when (!ct.IsCancellationRequested)
         {
             return null;
         }
@@ -351,11 +377,14 @@ public sealed class SeiClient : ISeiClient
 
     public async Task<List<SeiUnidadeItem>> GetUserUnitsAsync(bool forceRefresh = false, CancellationToken ct = default)
     {
-        if (!forceRefresh && _cachedUserUnits.Count > 0)
-            return new List<SeiUnidadeItem>(_cachedUserUnits);
+        var auth = await AuthenticateAsync(forceRefresh, ct).ConfigureAwait(false);
+        var units = auth.SourceApi == "SEAD" ? _cachedSeadUnits : _cachedWsseiUnits;
+        if (units.Count > 0 || auth.SourceApi != _config.PrimaryApi)
+            return new List<SeiUnidadeItem>(units);
 
-        await AuthenticateSeadAsync(ct).ConfigureAwait(false);
-        return new List<SeiUnidadeItem>(_cachedUserUnits);
+        var fallback = OtherApi(auth.SourceApi);
+        await GetApiSessionAsync(fallback, rejectedSession: null, ct).ConfigureAwait(false);
+        return new List<SeiUnidadeItem>(fallback == "SEAD" ? _cachedSeadUnits : _cachedWsseiUnits);
     }
 
     public async Task<List<SeiOrgaoItem>> FetchOrgaosFromPortalAsync(CancellationToken ct = default)
@@ -473,11 +502,7 @@ public sealed class SeiClient : ISeiClient
         string unidade,
         CancellationToken ct)
     {
-        var auth = await AuthenticateAsync(forceRenew: false, ct).ConfigureAwait(false);
-        if (auth.SourceApi == "SEAD")
-        {
-            throw new SeiException(SeiErrorCode.Indisponivel);
-        }
+        var auth = await GetApiSessionAsync("WSSEI", rejectedSession: null, ct).ConfigureAwait(false);
 
         using var request = requestFactory();
         request.Headers.TryAddWithoutValidation("token", auth.Token);
@@ -498,27 +523,8 @@ public sealed class SeiClient : ISeiClient
             // O WSSEI pode responder 401 ou 403 quando o token expira.
             response.Dispose();
 
-            SeiAuthResult renewed;
-            await _authLock.WaitAsync(ct).ConfigureAwait(false);
-            try
-            {
-                if (_session is { } current && !ReferenceEquals(current, auth))
-                {
-                    // Outra thread concorrente já obteve um novo token válido enquanto aguardávamos
-                    renewed = current;
-                }
-                else
-                {
-                    _session = null;
-                    renewed = await AuthenticateInternalAsync(ct).ConfigureAwait(false);
-                }
-            }
-            finally
-            {
-                _authLock.Release();
-            }
-
-            if (renewed.SourceApi == "SEAD")
+            var renewed = await GetApiSessionAsync("WSSEI", auth, ct).ConfigureAwait(false);
+            if (renewed.SourceApi != "WSSEI")
                 throw new SeiException(SeiErrorCode.Indisponivel);
 
             using var retryReq = requestFactory();
@@ -1168,13 +1174,15 @@ public sealed class SeiClient : ISeiClient
 
     private async Task<HttpResponseMessage> SendSeadWithRetryAsync(string url, CancellationToken ct)
     {
-        var session = await GetSeadSessionAsync(rejectedSession: null, ct).ConfigureAwait(false);
+        var session = await GetApiSessionAsync("SEAD", rejectedSession: null, ct).ConfigureAwait(false);
         var response = await SendAsync(session).ConfigureAwait(false);
         if (response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden))
             return response;
 
         response.Dispose();
-        var renewed = await GetSeadSessionAsync(session, ct).ConfigureAwait(false);
+        var renewed = await GetApiSessionAsync("SEAD", session, ct).ConfigureAwait(false);
+        if (renewed.SourceApi != "SEAD")
+            throw new SeiException(SeiErrorCode.Indisponivel);
         return await SendAsync(renewed).ConfigureAwait(false);
 
         async Task<HttpResponseMessage> SendAsync(SeiAuthResult auth)
@@ -1185,23 +1193,27 @@ public sealed class SeiClient : ISeiClient
         }
     }
 
-    private async Task<SeiAuthResult> GetSeadSessionAsync(SeiAuthResult? rejectedSession, CancellationToken ct)
+    private async Task<SeiAuthResult> GetApiSessionAsync(string api, SeiAuthResult? rejectedSession, CancellationToken ct)
     {
         await _authLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (_seadSession is { } session && !ReferenceEquals(session, rejectedSession))
+            var session = api == "SEAD" ? _seadSession : _wsseiSession;
+            if (session != null && !ReferenceEquals(session, rejectedSession))
                 return session;
 
-            var activeSead = _session?.SourceApi == "SEAD";
-            if (activeSead)
+            if (api == "SEAD")
+                _seadSession = null;
+            else
+                _wsseiSession = null;
+
+            if (rejectedSession != null && ReferenceEquals(_session, rejectedSession))
+            {
                 _session = null;
-            _seadSession = null;
-            var token = await AuthenticateSeadAsync(ct).ConfigureAwait(false);
-            var renewed = _seadSession = new SeiAuthResult(token, "SEAD", DateTime.UtcNow);
-            if (activeSead)
-                _session = renewed;
-            return renewed;
+                return await AuthenticateInternalAsync(api, ct).ConfigureAwait(false);
+            }
+
+            return await LoginToApiAsync(api, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -1215,37 +1227,34 @@ public sealed class SeiClient : ISeiClient
         CancellationToken ct)
     {
         var auth = await AuthenticateAsync(forceRenew: false, ct).ConfigureAwait(false);
-        if (auth.SourceApi == "SEAD")
-        {
-            return await seadAction(ct).ConfigureAwait(false);
-        }
-
-        Exception? wsseiError = null;
+        var useSeadFirst = auth.SourceApi == "SEAD";
+        var primaryAction = useSeadFirst ? seadAction : wsseiAction;
+        var fallbackAction = useSeadFirst ? wsseiAction : seadAction;
         try
         {
-            return await wsseiAction(ct).ConfigureAwait(false);
+            return await primaryAction(ct).ConfigureAwait(false);
         }
-        catch (Exception ex) when (!ct.IsCancellationRequested && IsTransientOrDown(ex))
+        catch (Exception primaryError) when (!ct.IsCancellationRequested && IsTransientOrDown(primaryError))
         {
-            wsseiError = ex;
-            _db.Log("WARN", "Operação no WSSEI v2 falhou temporariamente. Acionando fallback SEAD...");
-        }
-
-        if (wsseiError != null)
-        {
+            var fallback = OtherApi(auth.SourceApi);
+            _db.Log("WARN", $"Operação em {auth.SourceApi} falhou temporariamente. Tentando {fallback}.");
             try
             {
-                return await seadAction(ct).ConfigureAwait(false);
+                return await fallbackAction(ct).ConfigureAwait(false);
             }
             catch (Exception) when (!ct.IsCancellationRequested)
             {
-                _db.Log("ERROR", "Falha também no fallback da SEAD.");
-                throw wsseiError;
+                _db.Log("ERROR", $"Falha também na operação em {fallback}.");
             }
-        }
 
-        throw new SeiException(SeiErrorCode.Indisponivel);
+            throw;
+        }
     }
+
+    private static string OtherApi(string api) => api == "SEAD" ? "WSSEI" : "SEAD";
+
+    private static bool CanFallbackOnLogin(Exception ex) => IsTransientOrDown(ex) ||
+        ex is SeiException { ErrorCode: SeiErrorCode.AcessoNegado or SeiErrorCode.RespostaInvalida };
 
     private static bool IsTransientOrDown(Exception ex) =>
         ex is HttpRequestException ||

@@ -463,14 +463,19 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                        <TextBlock Text="Endpoint Primário (WSSEI v2):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Endpoint WSSEI v2" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
                                         <TextBox x:Name="TxtCfgWsseiUrl" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                        <TextBlock Text="Endpoint Fallback (API SEAD):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Endpoint SEAD" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
                                         <TextBox x:Name="TxtCfgSeadUrl" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
                                     </StackPanel>
                                 </Grid>
+                                <TextBlock Text="Ordem das APIs (primária / fallback)" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                <ComboBox x:Name="CmbCfgPrimaryApi" SelectedValuePath="Tag" Height="28" Margin="0,0,0,10">
+                                    <ComboBoxItem Content="WSSEI v2 / SEAD" Tag="WSSEI"/>
+                                    <ComboBoxItem Content="SEAD / WSSEI v2" Tag="SEAD"/>
+                                </ComboBox>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="2*"/>
@@ -575,16 +580,24 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                         <TextBlock Text="Intervalo de Polling (Minutos):" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
                                         <TextBox x:Name="TxtCfgIntervaloMinutos" Height="28" Background="{DynamicResource Bg2}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource BorderBrush}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                        <TextBlock Text="Tema da Interface:" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
-                                        <ComboBox x:Name="CmbCfgTheme" Height="28" SelectionChanged="OnThemeChanged">
-                                            <ComboBoxItem Content="Dark" IsSelected="True"/>
-                                            <ComboBoxItem Content="Light"/>
+                                        <TextBlock Text="Tema da interface" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <ComboBox x:Name="CmbCfgTheme" Height="28" SelectedValuePath="Tag">
+                                            <ComboBoxItem Content="Escuro" Tag="Dark"/>
+                                            <ComboBoxItem Content="Claro" Tag="Light"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="8,0,0,0">
+                                        <TextBlock Text="Tema do Desktop Fence" FontSize="11" Foreground="{DynamicResource FgMuted}" Margin="0,0,0,3"/>
+                                        <ComboBox x:Name="CmbCfgFenceTheme" Height="28" SelectedValuePath="Tag">
+                                            <ComboBoxItem Content="Escuro" Tag="Dark"/>
+                                            <ComboBoxItem Content="Claro" Tag="Light"/>
                                         </ComboBox>
                                     </StackPanel>
                                 </Grid>
@@ -656,6 +669,7 @@
 
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
                                 <Button Content="🔄 Atualizar" Style="{StaticResource SecondaryButtonStyle}" Click="OnRefreshLogsClick" Margin="0,0,4,0"/>
+                                <Button Content="Copiar logs" Style="{StaticResource SecondaryButtonStyle}" Click="OnCopyLogsClick" ToolTip="Copiar os logs exibidos, respeitando os filtros" Margin="0,0,4,0"/>
                                 <Button Content="🗑️ Limpar Logs" Style="{StaticResource SecondaryButtonStyle}" Click="OnClearLogsClick"/>
                             </StackPanel>
                         </Grid>
